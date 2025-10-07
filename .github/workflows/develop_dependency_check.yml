@@ -75,17 +75,6 @@ jobs:
           name: scan-bundle
           path: scan-bundle
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore .NET dependencies
-        run: dotnet restore
-
-      - name: Build .NET
-        run: dotnet build
-
       - name: Run Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -100,6 +89,7 @@ jobs:
       - name: Run Trivy Convert report
         if: always()
         run: |
+          touch trivy-summary.html trivy-report.sarif
           trivy convert \
             --format template \
             --output trivy-summary.html \
@@ -138,6 +128,7 @@ jobs:
       - name: Run Semgrep Scan
         working-directory: scan-bundle
         run: |
+          touch semgrep-report.text semgrep-report.sarif
           semgrep scan \
             --config auto \
             --text \

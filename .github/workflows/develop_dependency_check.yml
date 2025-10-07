@@ -28,8 +28,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  trivy_scan:
-    name: Trivy scan
+  test_build:
+    name: Test Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -43,11 +43,54 @@ jobs:
       - name: Restore .NET dependencies
         run: dotnet restore
 
+      - name: Build .NET
+        run: dotnet build --no-restore
+
+      - name: Bundle workspace for scanners
+        shell: bash
+        run: |
+          mkdir -p ../scan-bundle
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '**/*.dll' \
+            --exclude '**/*.pdb' \
+            --exclude '**/runtimes'\
+            ./ ../scan-bundle/
+
+      - name: Upload scan bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-bundle
+          path: ../scan-bundle
+          retention-days: 2
+
+  trivy_scan:
+    name: Trivy scan
+    needs: [test_build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download scan bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: scan-bundle
+          path: scan-bundle
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore .NET dependencies
+        run: dotnet restore
+
+      - name: Build .NET
+        run: dotnet build
+
       - name: Run Trivy scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
-          scan-ref: "./"
+          scan-ref: ${{ github.workspace }}/scan-bundle
           format: "json"
           output: "trivy-report.json"
           severity: "HIGH,CRITICAL"
@@ -82,13 +125,17 @@ jobs:
     name: Semgrep scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Download scan bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: scan-bundle
+          path: scan-bundle
 
       - name: Install Semgrep
         run: pip install semgrep
 
       - name: Run Semgrep Scan
+        working-directory: scan-bundle
         run: |
           semgrep scan \
             --config auto \
@@ -96,7 +143,7 @@ jobs:
             --text-output semgrep-report.text \
             --sarif \
             --sarif-output semgrep-report.sarif \
-            --error --quiet ./src
+            --error --quiet ./
 
       - name: Upload Semgrep SARIF
         if: always()
@@ -108,5 +155,5 @@ jobs:
         if: always()
         run: |
           echo '```' >> $GITHUB_STEP_SUMMARY
-          cat semgrep-report.text >> $GITHUB_STEP_SUMMARY
+          sed -n '1,300p' semgrep-report.text || echo 'No findings or output truncated.' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

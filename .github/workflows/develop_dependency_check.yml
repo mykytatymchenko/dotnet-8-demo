@@ -123,6 +123,7 @@ jobs:
 
   semgrep_scan:
     name: Semgrep scan
+    needs: [test_build]
     runs-on: ubuntu-latest
     steps:
       - name: Download scan bundle

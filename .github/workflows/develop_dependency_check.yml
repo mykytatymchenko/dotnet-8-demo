@@ -49,19 +49,19 @@ jobs:
       - name: Bundle workspace for scanners
         shell: bash
         run: |
-          mkdir -p ../scan-bundle
+          mkdir -p /tmp/scan-bundle
           rsync -a --delete \
             --exclude '.git' \
             --exclude '**/*.dll' \
             --exclude '**/*.pdb' \
             --exclude '**/runtimes'\
-            ./ ../scan-bundle/
+            ./ /tmp/scan-bundle
 
       - name: Upload scan bundle
         uses: actions/upload-artifact@v4
         with:
           name: scan-bundle
-          path: ../scan-bundle
+          path: /tmp/scan-bundle
           retention-days: 2
 
   trivy_scan:

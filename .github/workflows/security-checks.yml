@@ -147,7 +147,7 @@ jobs:
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: semgrep-report.sarif
+          sarif_file: scan-bundle/semgrep-report.sarif
 
       - name: Publish Semgrep summary
         if: always()

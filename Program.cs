@@ -14,6 +14,7 @@ namespace GrpcDemoService
         /// <param name="args">The command-line arguments passed to the application.</param>
         public static void Main(string[] args)
         {
+            // test
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddGrpc().AddJsonTranscoding();
